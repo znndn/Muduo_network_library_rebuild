@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#pragma once
 
 constexpr int SpaceForProtHeader = 8;
 constexpr int SpaceInitialize = 1024;

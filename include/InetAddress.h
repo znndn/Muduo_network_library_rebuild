@@ -1,5 +1,6 @@
 #include <iostream>
 #include <netinet/in.h>
+#pragma once
 
 class InetAddress
 {

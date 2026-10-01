@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#pragma once
 
 class Buffer;
 
