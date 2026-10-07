@@ -24,7 +24,7 @@ std::string Timestamp::toString() const
 {
     char arr[128]={0};
     auto curr=localtime(&microSecondsSinceEpoch_);
-    snprintf(arr,128,"%d/%d/%d %d:%d:%d", 
+    snprintf(arr,128,"%4d/%02d/%02d %02d:%02d:%02d", 
         curr->tm_year+1900,
         curr->tm_mon+1,
         curr->tm_mday,

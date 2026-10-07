@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmuduo_core.a  CMakeFiles/muduo_core.dir/src/buffer.cc.o CMakeFiles/muduo_core.dir/src/CallBacks.cc.o CMakeFiles/muduo_core.dir/src/CurrentThread.cc.o CMakeFiles/muduo_core.dir/src/InetAddress.cc.o CMakeFiles/muduo_core.dir/src/Logger.cc.o CMakeFiles/muduo_core.dir/src/timestamp.cc.o
+/usr/bin/ranlib libmuduo_core.a

@@ -35,8 +35,9 @@ std::string InetAddress::toIPPort() const
     char arr[64]={0};
     inet_ntop(AF_INET,&sockaddr,&arr[0],sizeof(arr));
     uint16_t port=ntohs(sockaddr.sin_port);
-    arr[32]=':';
-    sprintf(&arr[33],"%u",port);
+    int ipv4Size=strlen(arr);
+    arr[ipv4Size]=':';
+    sprintf(&arr[ipv4Size+1],"%u",port);
     return arr;
 }
 

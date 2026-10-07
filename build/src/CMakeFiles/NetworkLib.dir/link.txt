@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -g  -shared -Wl,-soname,libNetworkLib.so -o libNetworkLib.so CMakeFiles/NetworkLib.dir/CallBacks.cc.o CMakeFiles/NetworkLib.dir/CurrentThread.cc.o CMakeFiles/NetworkLib.dir/InetAddress.cc.o CMakeFiles/NetworkLib.dir/Logger.cc.o CMakeFiles/NetworkLib.dir/buffer.cc.o CMakeFiles/NetworkLib.dir/timestamp.cc.o 
