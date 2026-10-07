@@ -1,12 +1,22 @@
 
 #pragma once
 
+#include <memory>
+#include <functional>
 #include <iostream>
 
-// 它存在的唯一理由是打破 `TcpConnection.h` 和 `TcpServer.h` 之间的循环 include。
 
+class Buffer;
+class TcpConnection;
+class Timestamp;
 
+using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
+using ConnectionCallback = std::function<void(const TcpConnectionPtr &)>;
+using CloseCallback = std::function<void(const TcpConnectionPtr &)>;
+using WriteCompleteCallback = std::function<void(const TcpConnectionPtr &)>;
+using HighWaterMarkCallback = std::function<void(const TcpConnectionPtr &, size_t)>;
 
+using MessageCallback = std::function<void(const TcpConnectionPtr &, Buffer *, Timestamp)>;
 
 
 
