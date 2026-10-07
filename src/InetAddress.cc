@@ -26,7 +26,7 @@ InetAddress::InetAddress(sockaddr_in &sockaddr)
 std::string InetAddress::toIP() const
 {
     char arr[64]={0};
-    inet_ntop(AF_INET,&sockaddr,&arr[0],sizeof(arr));
+    inet_ntop(AF_INET,&sockaddr.sin_addr,&arr[0],sizeof(arr));
     return arr;
 }
 

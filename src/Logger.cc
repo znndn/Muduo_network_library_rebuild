@@ -19,16 +19,16 @@ void Logger::log(std::string msg)
     std::string prefVar;
     switch (logLevel)
     {
-    case 1:
+    case 0:
         prefVar="info ";
         break;
-    case 2:
+    case 1:
         prefVar="error ";
         break;
-    case 3:
+    case 2:
         prefVar="fatal ";
         break;
-    case 4:
+    case 3:
         prefVar="debug";
         break;
     default:

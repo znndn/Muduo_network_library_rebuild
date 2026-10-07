@@ -14,7 +14,7 @@ class Buffer
     std::vector<char> buffer;
 
     public:
-    Buffer(){};
+    Buffer();
     ~Buffer(){};
 
     int readableBytes(); // 未读长度

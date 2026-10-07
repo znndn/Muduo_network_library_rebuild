@@ -8,9 +8,9 @@ namespace CurrentThread
 {
     __thread int threadID; 
     // 这里thread的作用是让变量对于每个线程独立，而非作为全局变量等
-    void CurrentThread::cacheThreadID()
+    void cacheThreadID()
     {
-        if (CurrentThread::threadID==0)
+        if (threadID==0)
         {
             int curr_thread_id=syscall(SYS_gettid);
             threadID = static_cast<pid_t>(curr_thread_id);
