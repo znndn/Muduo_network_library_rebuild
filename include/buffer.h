@@ -13,7 +13,9 @@ class Buffer
     int writerIndex; //从这里开始写新的内容
     std::vector<char> buffer;
 
-    public:
+    public: 
+    // 每个 TcpConnection（handler） 各持有一个 Buffer 作为读写缓冲区
+    // 并不是单例，只是禁止拷贝
     Buffer();
     ~Buffer(){};
 
