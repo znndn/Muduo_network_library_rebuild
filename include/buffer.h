@@ -1,7 +1,9 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
-#pragma once
+
 
 constexpr int SpaceForProtHeader = 8;
 constexpr int SpaceInitialize = 1024;
@@ -12,6 +14,7 @@ class Buffer
     int readerIndex; //包括报头，此index之前是读完可以扔掉的内容，之后是未读内容
     int writerIndex; //从这里开始写新的内容
     std::vector<char> buffer;
+    void ensureNewStringSize(int ByteRequested);
 
     public: 
     // 每个 TcpConnection（handler） 各持有一个 Buffer 作为读写缓冲区
@@ -29,9 +32,11 @@ class Buffer
     void useData(int UsedLength); // 输入新读取的长度
     void useAllData(); // 重置回开始构造的样子
 
-    void createWritingSpace(int ByteRequested);
-    void stringAddIntoBuffer(int size);
+    void MoveorExpend(int size);
     char* beginWriteLoc();
+    void bufferAppend(int size, char* data);
+    // 直接存入数据进vector buffer（包括必要的空间调整）
+
 
 
     int readFd(int fd, int *saveErrno);
