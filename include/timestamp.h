@@ -7,10 +7,10 @@ class Timestamp
 {
     public:
     Timestamp();
-    explicit Timestamp(long microSecondsSinceEpoch);
+    explicit Timestamp(long SecondsSinceEpoch);
     static Timestamp now();
     std::string toString() const;
 
     private:
-    long microSecondsSinceEpoch_;
+    long SecondsSinceEpoch_;
 };

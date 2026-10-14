@@ -3,6 +3,11 @@
 #include "Logger.h"
 #include "timestamp.h"
 
+Logger::Logger()
+{
+    logLevel=0;
+}
+
 Logger& Logger::getLogger()
 {
     static Logger newLogger;

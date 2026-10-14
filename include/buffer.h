@@ -29,8 +29,8 @@ class Buffer
     // 返回报文头（如果有）的起始地址
     char* MsgStartLoc();
 
-    void useData(int UsedLength); // 输入新读取的长度
-    void useAllData(); // 重置回开始构造的样子
+    void useData(int UsedLength); // 消费指定长度UsedLength，移动读下标
+    void useAllData(); // 重置读写的下标
 
     void MoveorExpend(int size);
     char* beginWriteLoc();
@@ -38,11 +38,12 @@ class Buffer
     // 直接存入数据进vector buffer（包括必要的空间调整）
 
 
-
     int readFd(int fd, int *saveErrno);
     // 返回readv的结果，-1表示失败，其他表示读到的字节数
     int writeFd(int fd, int *saveErrno);
 
+    std::string retrieveAllAsString();
+    std::string retrieveAsString(size_t len);
 
 };
 

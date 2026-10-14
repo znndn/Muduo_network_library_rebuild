@@ -52,7 +52,7 @@ void Buffer::useAllData()
 
 void Buffer::ensureNewStringSize(int ByteRequested)
 {
-    if (writableBytes()<ByteRequested) // 无须扩容也无须挪位置的情况
+    if (writableBytes()>ByteRequested) // 无须扩容也无须挪位置的情况
     {
         //啥也不做
     }
@@ -91,14 +91,8 @@ char* Buffer::beginWriteLoc()
 void Buffer::bufferAppend(int size,char* data)
 {
     ensureNewStringSize(size);
-    char* pointer=data;
-    for (int i=0;i<size;i++)
-    {
-        buffer.push_back(*pointer);
-        pointer++;
-    }
-    writerIndex+=size;
-    delete pointer;
+    std::copy(data, data+size, MsgStartLoc());
+    writerIndex += size;
 }
 
 

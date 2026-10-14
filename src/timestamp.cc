@@ -6,24 +6,26 @@
 
 Timestamp::Timestamp()
 {
-    microSecondsSinceEpoch_=0;
+    SecondsSinceEpoch_=0;
 }
 
-Timestamp::Timestamp(long microSecondsSinceEpoch)
-    :microSecondsSinceEpoch_(microSecondsSinceEpoch)
+Timestamp::Timestamp(long SecondsSinceEpoch)
+    :SecondsSinceEpoch_(SecondsSinceEpoch)
 {
 }
 
 Timestamp Timestamp::now()
 {
-    Timestamp* current = new Timestamp(std::time(nullptr));
-    return *current;
+    // 整个项目都避免new和delete，违反raii
+    // 不new的办法就是去构造新的（作为局部变量），然后直接返回
+    Timestamp curr(time(NULL));
+    return curr;
 }
 
 std::string Timestamp::toString() const
 {
     char arr[128]={0};
-    auto curr=localtime(&microSecondsSinceEpoch_);
+    auto curr=localtime(&SecondsSinceEpoch_);
     snprintf(arr,128,"%4d/%02d/%02d %02d:%02d:%02d", 
         curr->tm_year+1900,
         curr->tm_mon+1,

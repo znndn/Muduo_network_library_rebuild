@@ -7,7 +7,8 @@ class Logger: noncopyable
 {
     private:
     
-    Logger()=default;
+    Logger();
+    // 这里最好初始化loglevel
     ~Logger()=default;
     int logLevel;
 
