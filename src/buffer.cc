@@ -156,6 +156,25 @@ int Buffer::writeFd(int fd, int *saveErrno)
     return result;
 }
 
+std::string Buffer::retrieveAsString(size_t len)
+{
+    std::string str;
+    auto pointer=MsgStartLoc();
+    for (int i=0;i<len;i++)
+    {
+        str.push_back(*pointer);
+        pointer++;
+    }
+    useData(len);
+    if (readerIndex==buffer.size()-1) useAllData();
+    return str;
+}
+
+std::string Buffer::retrieveAllAsString()
+{
+    retrieveAsString(readableBytes());
+    // 把当前所有能读取的都读取了
+}
 
 
 
