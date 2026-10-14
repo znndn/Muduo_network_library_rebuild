@@ -33,7 +33,7 @@ std::string InetAddress::toIP() const
 std::string InetAddress::toIPPort() const
 {
     char arr[64]={0};
-    inet_ntop(AF_INET,&sockaddr,&arr[0],sizeof(arr));
+    inet_ntop(AF_INET,&sockaddr.sin_addr,&arr[0],sizeof(arr));
     uint16_t port=ntohs(sockaddr.sin_port);
     int ipv4Size=strlen(arr);
     arr[ipv4Size]=':';
