@@ -172,7 +172,7 @@ std::string Buffer::retrieveAsString(size_t len)
 
 std::string Buffer::retrieveAllAsString()
 {
-    retrieveAsString(readableBytes());
+    return retrieveAsString(readableBytes());
     // 把当前所有能读取的都读取了
 }
 
