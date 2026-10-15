@@ -35,7 +35,8 @@ char* Buffer::MsgStartLoc()
 
 void Buffer::useData(int UsedLength)
 {
-    if (UsedLength<=readableBytes())
+    if (UsedLength<readableBytes())
+    // 注意不能取等，用完了就必须复位了
     {
         readerIndex+=UsedLength;
     }
@@ -91,7 +92,7 @@ char* Buffer::beginWriteLoc()
 void Buffer::bufferAppend(int size,char* data)
 {
     ensureNewStringSize(size);
-    std::copy(data, data+size, MsgStartLoc());
+    std::copy(data, data+size, beginWriteLoc());
     writerIndex += size;
 }
 
@@ -166,7 +167,6 @@ std::string Buffer::retrieveAsString(size_t len)
         pointer++;
     }
     useData(len);
-    if (readerIndex==buffer.size()-1) useAllData();
     return str;
 }
 

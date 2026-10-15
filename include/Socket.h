@@ -21,9 +21,6 @@ class Socket: noncopyable
     
     int accept(InetAddress *clientAddr);
 
-    int acceptGetConnfd(InetAddress *oppoaddr);
-    // 建立新的连接时获得对方的InetAddress类型的数据，返回对应的connfd
-
     void shutDownWrite(); 
     // 半关闭
 

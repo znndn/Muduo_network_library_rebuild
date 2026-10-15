@@ -13,7 +13,7 @@ Socket::Socket(int sockfd): sockfd(sockfd)
 Socket::~Socket()
 {
     ::close(sockfd);
-    // RAII 的重点，一定要记得析构的时候关闭fd句柄
+    // RAII 的重点，一定要记得析构的时候关闭fd句柄，析构函数要保证收回所有资源
 }
 
 int Socket::Getfd() const
@@ -34,7 +34,11 @@ void Socket::BindAddress(const InetAddress &currAddr)
 
 void Socket::listen()
 {
-    ::listen(sockfd,4096);
+    int result=::listen(sockfd,4096);
+    if (result==-1)
+    {
+        log_fatal("failed to listen to sockfd %d",sockfd);
+    }
 }
 
 int Socket::accept(InetAddress *clientAddr)
