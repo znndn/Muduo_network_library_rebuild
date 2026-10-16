@@ -1,2 +1,3 @@
 build/
 AGENTS.md
+build_asan/

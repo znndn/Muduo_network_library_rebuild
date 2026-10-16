@@ -14,5 +14,13 @@ set(LIBS
 #添加子目录，将中型项目的cmakelist分开文件夹写再去统筹是合理的
 add_subdirectory(src)
 
+# 使用以下方式打开并运行asan：
 
+# cmake .. \
+#   -DCMAKE_BUILD_TYPE=Debug \
+#   -DCMAKE_CXX_FLAGS="-fsanitize=address -g" \
+#   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" \
+#   -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address"
+
+# make -j
 
