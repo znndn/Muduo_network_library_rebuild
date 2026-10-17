@@ -68,7 +68,9 @@ class Channel: noncopyable
     const int fd_;
     int events_; // 当前关注的事件
     int revents_; // 实际发生的事件
-    int index_;
+    int index_; 
+    // 被 epollpoller 调用.
+    // 记录这个 Channel 目前登记到了新 channel，已登记和已删除中的哪一步”
 
     std::weak_ptr<void> tie_;
     bool tied;
