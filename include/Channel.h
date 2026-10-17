@@ -17,8 +17,9 @@ class Channel: noncopyable
 
     using EventCallback = std::function<void()>;
     using ReadEventCallback = std::function<void(Timestamp)>;
-    // 相当于只接受timestamp的可调用对象
-
+//相当于只接受timestamp的可调用对象
+//如果没有被赋值，转换为 bool 时为 false；                                                                                         
+//一旦调用了 setReadCallback(...) 绑定了可调用对象，转换为 bool 就为 true。   
     Channel(EventLoop* loop, int fd);
     ~Channel()=default;
 
@@ -26,7 +27,8 @@ class Channel: noncopyable
     // 根据本次结果，调用此前保存的函数
 
     void setReadCallback(ReadEventCallback cb);
-    // 写出可读时候的逻辑
+    // 写出可读时候的逻辑,
+    // 此处具体的实现逻辑是由传入参数 cb 提供的，不会在 channel.cc 和 h 文件中定义。
     void setWriteCallback(EventCallback cb);
     void setCloseCallback(EventCallback cb);
     void setErrorCallback(EventCallback cb);
@@ -49,7 +51,8 @@ class Channel: noncopyable
     bool isWriting() const;
     bool isReading() const;
 
-    EventLoop* ownerLoop();
+    EventLoop* ownerLoop();// get ownerloop
+
     void remove();
 
     private:

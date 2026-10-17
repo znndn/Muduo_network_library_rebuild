@@ -10,7 +10,7 @@
 
 class EventLoop;
 
-Channel::Channel(EventLoop* loop, int fd):loop_(loop),fd_(fd)
+Channel::Channel(EventLoop* loop, int fd):fd_(fd),loop_(loop)
 {
     events_=0;
     revents_=0;
@@ -27,7 +27,13 @@ void Channel::handleEvent(Timestamp receiveTime)
     else
     {
         std::shared_ptr<void> guard=tie_.lock();
+        // shared_ptr<void> 的意思是这个指针不暴露对象的具体类型，但仍参与共有的寿命管理。
+        // 对于不确定的对象类型，可以这么写。
+        // weak_ptr::lock() 尝试取得 shared_ptr；
+        // 对象已经过期时得到空指针。不是加互斥锁
         if (guard) 
+        // 这一步 guard 自己也持有 shared_ptr，
+        // 因此如果在回调的过程中，之前的 shared_ptr 全部被释放，该内容也不会被删除。
         {
             handleEventWithGuard(receiveTime);
         }
@@ -38,21 +44,29 @@ void Channel::handleEventWithGuard(Timestamp receiveTime)
 {
     //EPOLLHUP 指的是hangup 读写都关闭,注意同时没有需要收的信息
     // 这时候就应该执行回调关闭的代码块
-    if (revents_&EPOLLHUP!=0 && revents_&EPOLLIN==0)
+    if ((revents_&EPOLLHUP)!=0 && (revents_&EPOLLIN)==0)
+    // 注意判断它是否相等的优先级高于按位和的优先级，因此要加上括号。
     {
-        closeCallback_();
+        // 调用前检查对应回调是否已设置!
+        if (closeCallback_)
+        {
+            closeCallback_();
+        }
     }
-    else if (revents_&EPOLLERR!=0)
+    if ((revents_&EPOLLERR)!=0)
     {
-        errorCallback_();
+        if (errorCallback_)
+            errorCallback_();
     }
-    else if (revents_&EPOLLIN!=0 || revents_&EPOLLPRI!=0)
+    if ((revents_&EPOLLIN)!=0 || (revents_&EPOLLPRI)!=0)
     {
-        readCallback_(receiveTime);
+        if (readCallback_)
+            readCallback_(receiveTime);
     }
-    else if (revents_&EPOLLOUT!=0)
+    if ((revents_&EPOLLOUT)!=0)
     {
-        writeCallback_();
+        if (writeCallback_)
+            writeCallback_();
     }
 }
 
@@ -83,14 +97,17 @@ void Channel::set_index(int idx)
 }
 
 
-void Channel::enableReading()
+void Channel::enableReading() 
+// 要记得读关注，同时需要设定 epoll pri。不只是 epoll in。
 {
     events_ = events_ | EPOLLIN;
+    events_ = events_ | EPOLLPRI;
     update();
 }
 void Channel::disableReading()
 {
     events_ = events_ & ~EPOLLIN;
+    events_ = events_ & ~EPOLLPRI;
     update();
 }
 void Channel::enableWriting()
@@ -120,6 +137,11 @@ bool Channel::isWriting() const
 bool Channel::isReading() const
 {
     return (events_&EPOLLIN)!=0?true:false;
+}
+
+EventLoop* Channel::ownerLoop()
+{
+    return loop_;
 }
 
 void Channel::setReadCallback(ReadEventCallback cb)
