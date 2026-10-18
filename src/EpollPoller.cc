@@ -18,10 +18,12 @@ constexpr int Deleted=2;
 EPollPoller::EPollPoller(EventLoop* loop):Poller(loop)
 {
     events_.resize(kInitEventListSize);
-    if (epoll_create1(EPOLL_CLOEXEC)==-1)
+    auto result=epoll_create1(EPOLL_CLOEXEC);
+    if (result==-1)
     {
-        log_error("unable to create epoll fd");
+        log_fatal("unable to create epoll fd");
     }
+    else epollfd_=result;
 }
 EPollPoller::~EPollPoller() 
 {
@@ -35,29 +37,49 @@ void EPollPoller::update(int operation, Channel* channel)
     TempEvent.data.ptr=channel;
     // 让数据部分存储channel指针
     // 此时Channel* 隐式转换为了泛型指针 void* 交给内核保管
-    int result=epoll_ctl(epollfd_, operation, TempEvent.events, &TempEvent);
+    int result=epoll_ctl(epollfd_, operation, channel->fd(), &TempEvent);
+    // 根据 operation添加或删除内核对它的监听，
+    // 或者通过channel->events();修改内核对他关注的事项。
+
+    // 一个 epoll 实例，也就是一个 epollwait 会监督多个 socket fd，
+    // 相当于每个连接都是一个文件描述符socket fd，
+    // 因此 epoll fd 跟 sockets fd 是不一样的。第3个参数应该使用 sockets fd。
+
     if (result==-1)
     {
-        log_error("fail to update epoll fd %d with errno %d",epollfd_,errno);
+        if (operation==EPOLL_CTL_DEL)
+            log_error("fail to update epoll fd %d with errno %d",epollfd_,errno);
+        else
+            log_fatal("fail to update epoll fd %d with errno %d",epollfd_,errno);
     }
 }
 
 Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels) 
 {
     int result=epoll_wait(epollfd_, &events_[0], events_.size(), timeoutMs);
+    auto CheckErrno=errno;
     auto curr=Timestamp::now();
 
     if (result==-1)
     {
-        if (errno==EINTR) return curr; //不记录打断的情况
+        if (CheckErrno==EINTR) return curr; //不记录打断的情况
         std::string now=curr.toString();
-        log_error("epoll wait failed with errno %d at %s",errno,now);
+        log_error("epoll wait failed with errno %d at %s",CheckErrno, now.c_str());
+        // %s 只能接收char* 需要c风格字符串
     }
     else if (result>0)
     {
-        fillActiveChannels(events_.size(),activeChannels);
-        // 要扩大哪个数组？我不明白。
-        // 看起来 ChannelList* activeChannels 跟 epoll wait 处理的 events_ 都是可变的大小
+        fillActiveChannels(result,activeChannels);
+        // 每次 active channels 的数量是不确定的，也就是可能含有不定数量的文件描述符，
+        // 不一定能填满 event list 的所有位置，也有可能比 event list 要更多，
+        // 因此不能直接传入 event list 的大小，读到空位置会导致段错误。
+        // 注意epollwait成功时会返回新的fd数量
+
+        // 虽然Eventlist是可变stl，但是epollwait无法自动扩容，需要手动调整大小
+        if (result == events_.size()) 
+        {
+            events_.resize(events_.size() * 2);
+        }
     }
     return curr;
 }
@@ -73,23 +95,24 @@ void EPollPoller::updateChannel(Channel* channel)
     }
     else if (channel->index()==Added)
     {
-        update(EPOLL_CTL_MOD,channel);
-        // 让内核通过struct epoll_event的events，修改关注的内容（由update更新）
+        if (channel->isNoneEvent())
+        // 一定要在mod之前先检查是否移除关注了（此时index不变）
+        // 如果在 channel.events=0 的情况下 mod 了，会导致非法参数的错误。
+        {
+            update(EPOLL_CTL_DEL, channel);
+            channel->set_index(Deleted);
+        }
+        else
+        {
+            update(EPOLL_CTL_MOD,channel);
+            // 让内核通过struct epoll_event的events，修改关注的内容（由update更新）
+        }
     }
-    else if (channel->index()==Deleted)
+    else // channel->index()==Deleted
     {
         channel->set_index(Added);
         update(EPOLL_CTL_ADD,channel);
         // 从移除恢复读关注
-    }
-    else if (channel->isNoneEvent())
-    {
-        update(EPOLL_CTL_DEL, channel);
-        channel->set_index(Deleted);
-    }
-    else
-    {
-        update(EPOLL_CTL_MOD, channel);
     }
 }
 void EPollPoller::removeChannel(Channel* channel)

@@ -82,7 +82,7 @@ class Logger: noncopyable
         exit(-1); \
     } while (0)  
 
-
+// 注意这里的区别，log_fatal会结束程序，别的不会。
 
 
 

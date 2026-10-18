@@ -121,6 +121,7 @@ void Channel::disableWriting()
     update();
 }
 void Channel::disableAll()
+// 移除所有关注，请注意这时候 index 不变。
 {
     events_=0;
     update();
