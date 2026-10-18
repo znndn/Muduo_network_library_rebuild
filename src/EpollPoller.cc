@@ -3,11 +3,13 @@
 #include <vector>
 #include <unistd.h>
 #include <errno.h>
+#include <string>
 
 #include "Poller.h"
 #include "EpollPoller.h"
 #include "Logger.h"
 #include "Channel.h"
+#include "timestamp.h"
 
 constexpr int New=-1;
 constexpr int Added=1;
@@ -31,6 +33,8 @@ void EPollPoller::update(int operation, Channel* channel)
     epoll_event TempEvent;
     TempEvent.events=channel->events();
     TempEvent.data.ptr=channel;
+    // 让数据部分存储channel指针
+    // 此时Channel* 隐式转换为了泛型指针 void* 交给内核保管
     int result=epoll_ctl(epollfd_, operation, TempEvent.events, &TempEvent);
     if (result==-1)
     {
@@ -38,8 +42,28 @@ void EPollPoller::update(int operation, Channel* channel)
     }
 }
 
+Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels) 
+{
+    int result=epoll_wait(epollfd_, &events_[0], events_.size(), timeoutMs);
+    auto curr=Timestamp::now();
+
+    if (result==-1)
+    {
+        if (errno==EINTR) return curr; //不记录打断的情况
+        std::string now=curr.toString();
+        log_error("epoll wait failed with errno %d at %s",errno,now);
+    }
+    else if (result>0)
+    {
+        fillActiveChannels(events_.size(),activeChannels);
+        // 要扩大哪个数组？我不明白。
+        // 看起来 ChannelList* activeChannels 跟 epoll wait 处理的 events_ 都是可变的大小
+    }
+    return curr;
+}
+
 void EPollPoller::updateChannel(Channel* channel) 
-// 根据channel index当前状况更新index并让内核开始监控（通过包装了epollctl的update）
+// 根据channel index当前状况更新index并让内核处理对应的epollfd_（通过包装了epollctl的update）
 {
     if (channel->index()==New)
     {
@@ -76,4 +100,14 @@ void EPollPoller::removeChannel(Channel* channel)
         update(EPOLL_CTL_DEL, channel);
     }
     channel->set_index(New);
+}
+
+void EPollPoller::fillActiveChannels(int numEvents, ChannelList* activeChannels) const
+{
+    // activeChannels_的EventLoop在等待前已经清空，需要收集本轮就绪Channel(来自events_)的地址
+    for (int i=0;i<numEvents;i++)
+    {
+        static_cast<Channel*>(events_[i].data.ptr)->set_revents(events_[i].events);
+        activeChannels->push_back(static_cast<Channel*>(events_[i].data.ptr));
+    }   
 }

@@ -24,6 +24,12 @@ private:
 
     using EventList = std::vector<epoll_event>;
     // epoll_events用于配置或接收文件描述符（fd）上的事件信息
+    // struct epoll_event
+    // {
+    // uint32_t events;	/* Epoll events */
+    // epoll_data_t data;	/* User da  ta variable */
+    // } __EPOLL_PACKED;
+    
     // 这里的 epollevents 结构体第2个参数 data ,
     // 本项目使用它的 data.ptr 保存对应的 Channel*
     // 第一个参数应该和 channel 的私有变量 event 相等。表示关注的事情。

@@ -42,9 +42,9 @@ class Logger: noncopyable
     {   \
         Logger& logLoc=Logger::getLogger();  \
         logLoc.setLogLevel(Logger::LogLevel::info);   \
-        /*注意上面这种，类名::可选的enum名称::具体的枚举元素*/                \
+        /*注意上面这种，类名::可选的enum名称::具体的枚举元素*/\
         char buffer[1024]={0};  \
-        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \ 
+        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \
         logLoc.log(buffer); \
     } while (0)  
 
@@ -55,7 +55,7 @@ class Logger: noncopyable
         logLoc.setLogLevel(Logger::LogLevel::error);   \
         /*注意上面这种，类名::可选的enum名称::具体的枚举元素*/                \
         char buffer[1024]={0};  \
-        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \ 
+        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \
         logLoc.log(buffer); \
     } while (0)  
 
@@ -66,7 +66,7 @@ class Logger: noncopyable
         logLoc.setLogLevel(Logger::LogLevel::debug);   \
         /*注意上面这种，类名::可选的enum名称::具体的枚举元素*/                \
         char buffer[1024]={0};  \
-        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \ 
+        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \
         logLoc.log(buffer); \
     } while (0)  
 
@@ -77,7 +77,7 @@ class Logger: noncopyable
         logLoc.setLogLevel(Logger::LogLevel::fatal);   \
         /*注意上面这种，类名::可选的enum名称::具体的枚举元素*/                \
         char buffer[1024]={0};  \
-        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \ 
+        snprintf(&buffer[0],1024,logMessage,##__VA_ARGS__);  \
         logLoc.log(buffer); \
         exit(-1); \
     } while (0)  
