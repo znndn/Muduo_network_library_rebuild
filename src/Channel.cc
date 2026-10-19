@@ -146,6 +146,7 @@ EventLoop* Channel::ownerLoop()
 }
 
 void Channel::setReadCallback(ReadEventCallback cb)
+// 具体的回调逻辑
 {
     readCallback_=std::move(cb);
     // 因为read需要单独接收时间戳，所以cb类型不同

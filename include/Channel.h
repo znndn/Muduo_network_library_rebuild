@@ -15,6 +15,7 @@ class Channel: noncopyable
 {
     public:
 
+    // 具体的回调逻辑不由channel决定，而是传入的cb lambda表达式决定
     using EventCallback = std::function<void()>;
     using ReadEventCallback = std::function<void(Timestamp)>;
 //相当于只接受timestamp的可调用对象

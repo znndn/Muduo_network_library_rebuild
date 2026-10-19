@@ -57,12 +57,13 @@ void EPollPoller::update(int operation, Channel* channel)
 Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels) 
 {
     int result=epoll_wait(epollfd_, &events_[0], events_.size(), timeoutMs);
+    // 这里如果没事做就一直等，不需要立即返回，并持续监控epollctl注册的fd，这和非阻塞没关系
     auto CheckErrno=errno;
     auto curr=Timestamp::now();
 
     if (result==-1)
     {
-        if (CheckErrno==EINTR) return curr; //不记录打断的情况
+        if (CheckErrno==EINTR) return curr; //不记录wakeup打断的情况
         std::string now=curr.toString();
         log_error("epoll wait failed with errno %d at %s",CheckErrno, now.c_str());
         // %s 只能接收char* 需要c风格字符串
@@ -76,9 +77,10 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels)
         // 注意epollwait成功时会返回新的fd数量
 
         // 虽然Eventlist是可变stl，但是epollwait无法自动扩容，需要手动调整大小
-        if (result == events_.size()) 
+        if (static_cast<long unsigned int>(result) == events_.size()) 
         {
             events_.resize(events_.size() * 2);
+            // 不扩容也可以，会慢一点，内核允许一次只返回部分就绪 fd，一次空间不够会多次传输并从头开始覆盖原有的
         }
     }
     return curr;
@@ -134,3 +136,8 @@ void EPollPoller::fillActiveChannels(int numEvents, ChannelList* activeChannels)
         activeChannels->push_back(static_cast<Channel*>(events_[i].data.ptr));
     }   
 }
+
+
+
+
+
