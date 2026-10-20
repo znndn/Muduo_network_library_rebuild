@@ -28,7 +28,7 @@ public:
     Timestamp pollReturnTime() const;
 
     void runInLoop(Functor cb);
-    // 在loop中提交任务，并当场执行
+    // 在loop中提交任务，同线程当场执行，否则加入queue
     void queueInLoop(Functor cb);
     // 在loop中提交任务，并将其存入成员队列
     void wakeup();

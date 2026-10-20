@@ -129,7 +129,9 @@ void EventLoop::queueInLoop(Functor cb)
         wakeup(); //正在执行已取出的任务，任务添加新任务
         return;
     }
-    else return; // 包括同线程在 loop 启动前调用 queueInLoop 等情况不用通知
+    else return; 
+    // 包括同线程在 loop 启动前调用 queueInLoop 等情况，
+    // 按当前条件不会自动通知不用通知（可能不能及时处理）
 }
 
 bool EventLoop::isInLoopThread() const
@@ -182,12 +184,14 @@ void EventLoop::doPendingFunctors()
 {
     callingPendingFunctors_=true;
     std::vector<Functor> functors;
-    if (pendingFunctors_.empty()==false)
+    // 注意即使是只读查询，也需要加锁再读
+    if (true)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         functors.assign(pendingFunctors_.begin(), pendingFunctors_.end());
+        // assign 不会移除成员队列里的原任务，因此需要手动清除
+        pendingFunctors_.clear();
     }
-    else return;
     for (Functor i : functors)
     {
         i();
