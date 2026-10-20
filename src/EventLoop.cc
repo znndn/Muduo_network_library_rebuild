@@ -88,11 +88,13 @@ void EventLoop::loop()
     {
         activeChannels_.clear();
         pollReturnTime_ = poller_->poll(10000,&activeChannels_);
+        // epollwait十秒超时而非一直等待，可以防止同线程在 loop 启动前调用 queueInLoop ，新任务可能永远不执行（所有fd都没动静的话）
         // 接下来处理epollwait返回的活跃fd（每个使用channel的方法），poll可以保证activeChannels_没有多余元素
         for (auto elem: activeChannels_)
         {
             elem->handleEvent(pollReturnTime_);
         }
+        doPendingFunctors();
     }
     looping_=false;
 }
@@ -101,6 +103,33 @@ void EventLoop::quit()
 {
     quit_=true;
     if (looping_) wakeup();
+}
+
+void EventLoop::runInLoop(Functor cb)
+{
+    if (isInLoopThread()==true) cb();
+    else queueInLoop(cb);
+}
+
+void EventLoop::queueInLoop(Functor cb)
+{
+    if (true) 
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pendingFunctors_.push_back(std::move(cb));
+    }
+
+    if (isInLoopThread()==false) 
+    {
+        wakeup(); //外线程
+        return;
+    }
+    else if (isInLoopThread()==true && callingPendingFunctors_==true)
+    {
+        wakeup(); //正在执行已取出的任务，任务添加新任务
+        return;
+    }
+    else return; // 包括同线程在 loop 启动前调用 queueInLoop 等情况不用通知
 }
 
 bool EventLoop::isInLoopThread() const
@@ -149,7 +178,22 @@ void EventLoop::handleRead()
         ,wakeupFd_,saveErrno);
 }
 
-
+void EventLoop::doPendingFunctors()
+{
+    callingPendingFunctors_=true;
+    std::vector<Functor> functors;
+    if (pendingFunctors_.empty()==false)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        functors.assign(pendingFunctors_.begin(), pendingFunctors_.end());
+    }
+    else return;
+    for (Functor i : functors)
+    {
+        i();
+    }
+    callingPendingFunctors_=false;
+}
 
 
 
