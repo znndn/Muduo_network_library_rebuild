@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <thread>
+#include <cerrno>
+#include <cstdint>
 #include <sys/eventfd.h>
 #include "noncopyable.h"
 #include "timestamp.h"
@@ -34,7 +36,8 @@ int createEventfd()
     auto SaveError=errno;
     if (result==-1)
     {
-        log_error("fail to create eventfd with errno %d",SaveError);
+        log_fatal("fail to create eventfd with errno %d",SaveError);
+        // 构造失败就不要返回了，用fatal结束程序
     }
     else
     {
@@ -42,20 +45,22 @@ int createEventfd()
     }
 }
 
+// 如果不按照h文件中声明的顺序初始化，可能会收到warning
 EventLoop::EventLoop():
+    threadId_(syscall(SYS_gettid)),
     poller_(Poller::newDefaultPoller(this)),
     wakeupFd_(createEventfd()),
-    wakeupChannel_(new Channel(this,wakeupFd_)),
-    threadId_(syscall(SYS_gettid))
+    wakeupChannel_(new Channel(this,wakeupFd_))
 {
     // 如果使用 make_unique 赋值poller_
     // 会尝试调用 Poller 的构造函数构造一个新的poller，
     // 而非将newDefaultPoller()的返回值转化为独占指针
 
-    // 注意eventloop初始化显然是跑在子线程上的（subreactor），
+    // 注意eventloop初始化通常是跑在子线程上的（subreactor），
     // 由主线程（mainreactor）先创建子线程，子线程再去创建eventloop，因此threadId_直接获取当前线程号即可
     looping_=false;
     quit_=false;
+    callingPendingFunctors_=false;
 
     if (t_loopInThisThread!=nullptr) log_fatal("found duplicate construction of EventLoop");
     else t_loopInThisThread=this;
@@ -101,7 +106,7 @@ void EventLoop::quit()
 bool EventLoop::isInLoopThread() const
 {
     if (syscall(SYS_gettid)==threadId_) 
-    // 注意区分Linux pid（上述）和C++进程id std::thread::getid
+    // 注意区分Linux tid（上述）和C++线程id std::thread::getid
     return true;
     else return false;
 }

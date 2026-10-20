@@ -63,7 +63,9 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels)
 
     if (result==-1)
     {
-        if (CheckErrno==EINTR) return curr; //不记录wakeup打断的情况
+        if (CheckErrno==EINTR) return curr; 
+        //不记录EINTR信号中断的情况,例如Ctrl+C，进程终止信号等，不是wakeup！
+        // EINTR 的全称是 Interrupted System Call（系统调用被中断）
         std::string now=curr.toString();
         log_error("epoll wait failed with errno %d at %s",CheckErrno, now.c_str());
         // %s 只能接收char* 需要c风格字符串

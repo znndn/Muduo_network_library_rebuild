@@ -28,7 +28,7 @@ public:
     void runInLoop(Functor cb);
     void queueInLoop(Functor cb);
     void wakeup();
-    // 由别的线程调用，修改eventfd让正在epollwait的当前线程退出
+    // 由别的线程调用，修改eventfd让正在epollwait收到新的可读项目返回
 
     void updateChannel(Channel* channel);
     void removeChannel(Channel* channel);
@@ -61,6 +61,7 @@ private:
     ChannelList activeChannels_;
     // 只保存本轮就绪对象；每轮重新生成
     std::atomic_bool callingPendingFunctors_;
+    // 标识当前 EventLoop 线程是否正在执行回调函数（即正处于 doPendingFunctors() 的执行循环中）
     std::vector<Functor> pendingFunctors_;
     std::mutex mutex_;
 
