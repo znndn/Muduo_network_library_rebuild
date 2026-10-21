@@ -121,6 +121,7 @@ void EPollPoller::updateChannel(Channel* channel)
 }
 void EPollPoller::removeChannel(Channel* channel)
 {
+    // 从channelmap移除，内核停止监控，调整index
     channels_.erase(channel->fd());
     if (channel->index()==Added)
     {

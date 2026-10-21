@@ -20,6 +20,7 @@ class Socket: noncopyable
     void listen();
     
     int accept(InetAddress *clientAddr);
+    // 绑定对方sockfd和地址端口
 
     void shutDownWrite(); 
     // 半关闭
