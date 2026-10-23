@@ -32,6 +32,8 @@ Acceptor::Acceptor(EventLoop* loop, const InetAddress& listenAddr, bool reusepor
     // 绑定acceptchannel的读回调readCallback_()，让其等效于this->handleRead()
     // this需要捕获，因为handleRead 虽然属于 Acceptor 类，
     // 但调用它仍然需要一个具体的 Acceptor 对象。 类里可能创建多个 Acceptor，回调得知道自己要调用哪一个。
+
+    // 注意类似这样的裸指针this反而不会增加引用计数（不会循环引用）
 }
 
 Acceptor::~Acceptor()

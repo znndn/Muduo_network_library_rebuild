@@ -35,6 +35,7 @@ class Channel: noncopyable
     void setErrorCallback(EventCallback cb);
 
     void tie(const std::shared_ptr<void>& obj);
+    // 在tcpconnection中调用，绑定该tcpconnection实例的指针（表示服务器和特定客户端的链接建立）
     int fd() const;
     int events() const;
     void set_revents(int revt);
