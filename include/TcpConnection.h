@@ -74,6 +74,9 @@ private:
     void handleWrite();
     void handleClose();
     void handleError();
+    // 执行自身 channel 的回调函数，实际上执行的就是上述函数
+    // 会在 tcp connection 的构造函数中绑定。
+
     void sendInLoop(const void* data, size_t len);
     void shutdownInLoop();
 
@@ -81,6 +84,8 @@ private:
     const std::string name_;
     std::atomic_int state_;
     bool reading_;
+    // 控制是否继续监听可读事件
+    // 在触发高水位回调缓冲区积压严重的时候，可以设为 false。
 
     std::unique_ptr<Socket> socket_;
     std::unique_ptr<Channel> channel_;
@@ -89,9 +94,13 @@ private:
     const InetAddress peerAddr_;
 
     ConnectionCallback connectionCallback_;
-    MessageCallback messageCallback_; // 持有的channel负责具体内容
+    // TCP 连接状态改变时的通知回调（建立成功 或 断开连接）
+    MessageCallback messageCallback_; 
+    // 有新数据到达且已被读入缓冲区时的通知回调(持有的channel负责具体逻辑)
 
     WriteCompleteCallback writeCompleteCallback_;
+    // 应用层发送缓冲区（outputBuffer_）中的数据
+    // 全部写入内核发送缓冲区时的通知回调（即“写完成”回调）。
     HighWaterMarkCallback highWaterMarkCallback_;
 
     CloseCallback closeCallback_;
