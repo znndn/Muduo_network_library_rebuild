@@ -22,6 +22,7 @@ void Channel::handleEvent(Timestamp receiveTime)
 {
     if (tied==false) //表示没有调用过函数tie（），也就是不可能绑定了上层
     {
+        // channel也可能服务于Acceptor和Eventloop（wakeup channel），因此没有绑定不能说明没用
         handleEventWithGuard(receiveTime);
     }
     else
@@ -30,7 +31,9 @@ void Channel::handleEvent(Timestamp receiveTime)
         // shared_ptr<void> 的意思是这个指针不暴露对象的具体类型，但仍参与共有的寿命管理。
         // 对于不确定的对象类型，可以这么写。
         // weak_ptr::lock() 尝试取得 shared_ptr；
-        // 对象已经过期时得到空指针。不是加互斥锁
+        // 对象已经过期时得到空指针。
+
+        // 本来就是one loop one thread，因此不是为了加锁，是为了延长tcpconnnection的生命周期
         if (guard) 
         // 这一步 guard 自己也持有 shared_ptr，
         // 因此如果在回调的过程中，之前的 shared_ptr 全部被释放，该内容也不会被删除。

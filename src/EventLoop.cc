@@ -139,7 +139,7 @@ bool EventLoop::isInLoopThread() const
     if (syscall(SYS_gettid)==threadId_) 
     // 注意区分Linux tid（上述）和C++线程id std::thread::getid
     return true;
-    else return false;
+    else return false;  
 }
 
 Timestamp EventLoop::pollReturnTime() const

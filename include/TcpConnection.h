@@ -59,7 +59,8 @@ public:
     }
 
     void connectEstablished();
-    void connectDestroyed();
+    void channelDistroy();
+    // 在正确线程解除 Channel 管理关系
 
 private:
     enum StateE {
@@ -96,7 +97,7 @@ private:
     ConnectionCallback connectionCallback_;
     // TCP 连接状态改变时的通知回调（建立成功 或 断开连接）
     MessageCallback messageCallback_; 
-    // 有新数据到达且已被读入缓冲区时的通知回调(持有的channel负责具体逻辑)
+    // 新数据已被读入缓冲区(调用handleread之后）的通知回调(持有的channel负责具体逻辑)
 
     WriteCompleteCallback writeCompleteCallback_;
     // 应用层发送缓冲区（outputBuffer_）中的数据
