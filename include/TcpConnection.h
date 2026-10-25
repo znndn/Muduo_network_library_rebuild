@@ -85,7 +85,7 @@ private:
     const std::string name_;
     std::atomic_int state_;
     bool reading_;
-    // 控制是否继续监听可读事件
+    // 标记是否继续监听可读事件
     // 在触发高水位回调缓冲区积压严重的时候，可以设为 false。
 
     std::unique_ptr<Socket> socket_;
@@ -97,7 +97,8 @@ private:
     ConnectionCallback connectionCallback_;
     // TCP 连接状态改变时的通知回调（建立成功 或 断开连接）
     MessageCallback messageCallback_; 
-    // 新数据已被读入缓冲区(调用handleread之后）的通知回调(持有的channel负责具体逻辑)
+    // 新数据已被读入缓冲区(调用handleread之后）的通知回调
+    // 让应用层消费buffer的数据
 
     WriteCompleteCallback writeCompleteCallback_;
     // 应用层发送缓冲区（outputBuffer_）中的数据
@@ -107,6 +108,8 @@ private:
     CloseCallback closeCallback_;
 
     size_t highWaterMark_;
-    Buffer inputBuffer_;
-    Buffer outputBuffer_;
+
+    //buffer 针对内核收发溢出的应用层缓冲区
+    Buffer inputBuffer_;  // 接收
+    Buffer outputBuffer_; // 发送
 };

@@ -112,6 +112,9 @@ void Buffer::bufferAppend(int size,char* data)
 int Buffer::readFd(int fd, int *saveErrno)
 {
     char AuxBuffer[65536];
+    // 线程私有的局部变量，在栈上
+
+    // 尝试将fd的东西分散读到成员buffer和辅助buffer中，并最终移动到成员buffer
     struct iovec vec[2];
     vec[0].iov_base=&buffer[0]+writerIndex;
     vec[0].iov_len=buffer.size()-writerIndex;

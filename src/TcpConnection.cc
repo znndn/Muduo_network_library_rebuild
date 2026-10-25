@@ -32,7 +32,7 @@ TcpConnection::TcpConnection(
                 highWaterMark_(64 * 1024 * 1024)
 {
     setState(Connecting);
-    reading_=true;
+    reading_=false;
     channel_->setReadCallback([this](Timestamp receiveTime){handleRead(receiveTime);});
     channel_->setWriteCallback([this](){handleWrite();});
     channel_->setCloseCallback([this](){handleClose();});
@@ -53,23 +53,30 @@ void TcpConnection::connectEstablished()
     setState(Connected);
     channel_->tie(shared_from_this()); 
     channel_->enableReading();
+    reading_=true;
     log_info("creating tcp connection on fd=%d state=%d\n", channel_->fd(), static_cast<int>(state_));
-    if(connectionCallback_==nullptr)
+    if(connectionCallback_!=nullptr)    // 为空则没有通知处理，避免异常提前检查
     {
-        return;
+        connectionCallback_(shared_from_this());
     }
-    connectionCallback_(shared_from_this());
-    // 通知应用层连接状态发生改变，为空则没有通知处理
+
 }
 // 彻底将 Channel 从 Poller/epoll 树中注销，并作为生命周期最后一次资源清理
 void TcpConnection::channelDistroy()
 {
     if (state_!=Disconnected) 
-    //为什么会有这种情况？一般先让channel回调handleclose，然后上层再调conndistroy啊，此时必然Disc
+    // 出错或者EOF时让channel回调handleclose，然后上层再调conndistroy清理
+    // 如果主动结束，不会调用handleclose，而是直接channelDistroy，因此此时需要完成handleClose的职能
     {    
         setState(Disconnected);
+        log_info("close tcp connection on fd=%d state=%d\n", channel_->fd(), static_cast<int>(state_));
         channel_->disableAll();
-        closeCallback_(shared_from_this());
+        reading_=false;
+        if(connectionCallback_!=nullptr) 
+        {
+            connectionCallback_(shared_from_this());
+        }
+        // closeCallback正是让持有者安排清理的（调用channelDistroy）
     }
     if (loop_->hasChannel(channel_.get())) 
     {
@@ -77,30 +84,61 @@ void TcpConnection::channelDistroy()
     }
 } 
 
+// handleRead 进入时，用户态缓冲区 Buffer 未必为空，之前的包可能没有消费完
+void TcpConnection::handleRead(Timestamp receiveTime)
+{
+    int Errors;
+    int result = inputBuffer_.readFd(socket_->Getfd(),&Errors);
+    if (result==-1)
+    {
+        if (Errors==EAGAIN || Errors==EWOULDBLOCK) return;
+        else if (Errors==EINTR) 
+        {
+            handleRead(receiveTime);
+            return;
+        }
+        errno=Errors;
+        handleError();
+        return;
+    }
+    else if (result==0) // 识别 EOF 后逻辑关闭
+    {
+        handleClose();
+    }
+    else
+    {
+        messageCallback_(shared_from_this(),&inputBuffer_,receiveTime);
+    }
+}
 // 停止接收事件、通知用户连接断开，并通知 TcpServer 开始注销此连接
 void TcpConnection::handleClose()
 {
     if (state_==Disconnected) return;
     setState(Disconnected);
-    log_info("start to close tcp connection on fd=%d state=%d\n", channel_->fd(), static_cast<int>(state_));
+    log_info("close tcp connection on fd=%d state=%d\n", channel_->fd(), static_cast<int>(state_));
     channel_->disableAll();
     reading_=false;
     TcpConnectionPtr guard(shared_from_this());
-    connectionCallback_(shared_from_this());
+    // 记得每次连接回调前都要判空，防止这里抛异常后面的不做了
+    if(connectionCallback_!=nullptr) 
+    {
+        connectionCallback_(shared_from_this());
+    }
     closeCallback_(shared_from_this());
 }
 // 处理channel的错误回调，对非零 socketError 记录后进入 handleClose
 void TcpConnection::handleError()
 {
+    if (state_==Disconnected) return;
     int socketError = 0;
     socklen_t length = sizeof(socketError);
     if (getsockopt(channel_->fd(), SOL_SOCKET, SO_ERROR, &socketError, &length) < 0) 
     // 将 optname 参数设置为 SO_ERROR 来专门查询该 Socket 内部操作产生的错误码，会写入传入缓冲区socketError
     {
         socketError = errno;
+        log_error("Error %d occured on socket fd %d,closing fd",socketError,socket_->Getfd());
+        handleClose();
     }
-    log_error("Error %d occured on socket fd %d,closing fd",socketError,socket_->Getfd());
-    handleClose();
 }
 
 
