@@ -89,15 +89,18 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 {
     if (state_==Disconnected || channel_->isReading()==false) return;
     int Errors;
-    int result = inputBuffer_.readFd(socket_->Getfd(),&Errors);
+    int result;
+
+    do
+    {
+        result = inputBuffer_.readFd(socket_->Getfd(),&Errors);
+        Errors=errno;
+
+    } while (result<0 && Errors==EINTR);
+
     if (result==-1)
     {
         if (Errors==EAGAIN || Errors==EWOULDBLOCK) return;
-        else if (Errors==EINTR) 
-        {
-            handleRead(receiveTime);
-            return;
-        }
         handleError();
         return;
     }
@@ -117,22 +120,25 @@ void TcpConnection::handleRead(Timestamp receiveTime)
         }
     }
 }
-void TcpConnection::handleWrite()
+void TcpConnection::handleWrite()   
 {
 // epollwait 返回时，channel针对写关注的fd调用handlewrite对应的回调函数，outputbuffer也需要消耗缓冲区
     if (state_==Disconnected || channel_->isWriting()==false) return;
     int Error;
-    int result = outputBuffer_.writeFd(socket_->Getfd(),&Error);
+    int result;
+
+    do
+    {
+        result = outputBuffer_.writeFd(socket_->Getfd(),&Error);
+        Error=errno;
+
+    } while (result<0 && Error==EINTR);
+
     if (result==-1)
     {
-        if (Error== EAGAIN|EWOULDBLOCK)
+        if (Error == EAGAIN || Error == EWOULDBLOCK)
         {
             channel_->enableWriting();
-            return;
-        }
-        else if (Error==EINTR)
-        {
-            handleWrite();
             return;
         }
         else
@@ -187,33 +193,39 @@ void TcpConnection::handleError()
     // 将 optname 参数设置为 SO_ERROR 来专门查询该 Socket 内部操作产生的错误码，会写入传入缓冲区socketError
     // getsockopt返回0表示查询成功，-1查询失败
     {
-        socketError = errno;
+        socketError=errno;
         log_error("Fail to locate errors on socket fd %d with errno %d",socket_->Getfd(),socketError);
         handleClose();
     }
-    else
+    else if (socketError!=0)
     {
-        socketError = errno;
         log_error("socket fd %d failed with errno %d",socket_->Getfd(),socketError);
         handleClose();
     }
+    //否则没查出来错误也没有查询失败，什么都不做
 }
 
 void TcpConnection::sendInLoop(const char* data, size_t len)
 {
-    if (state_==Disconnected) return;
+    if (state_!=Connected) return;
     else if (len<=0) return;
 
     if (outputBuffer_.readableBytes()>0 || channel_->isWriting()==true) 
     // 只有输出缓冲为空且没有进行中的写关注时，才尝试直接写新数据
     {
-        outputBuffer_.bufferAppend(len,const_cast<char*>(data));
+        outputBuffer_.bufferAppend(len,data);
     }
     else
     {
         int errors;
-        int result=outputBuffer_.writeFd(socket_->Getfd(),&errors);
-        errors=errno;
+        int result;
+        do
+        {
+            result=::write(socket_->Getfd(),data,len);
+            errors=errno;
+            
+        } while (result<0 && errors==EINTR);
+
         if (result>0)
         {
             if (result<len)
@@ -227,7 +239,6 @@ void TcpConnection::sendInLoop(const char* data, size_t len)
         {
             outputBuffer_.bufferAppend(len,const_cast<char*>(data));
             channel_->enableWriting();
-            sendInLoop(data,len);
             // 积压数据的处理由 handleWrite() 负责，不需要等下一次 sendInLoop()。
             // 只要写关注，每次epollwait就会可写时返回，触发handlewrite处理缓冲区
             return;
@@ -239,11 +250,6 @@ void TcpConnection::sendInLoop(const char* data, size_t len)
             {
                 outputBuffer_.bufferAppend(len,const_cast<char*>(data));
                 channel_->enableWriting();
-                return;
-            }
-            else if (errors==EINTR) //中断重来
-            {
-                sendInLoop(data,len);
                 return;
             }
             else

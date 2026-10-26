@@ -34,7 +34,7 @@ class Buffer
 
     void MoveorExpend(int size);
     char* beginWriteLoc();
-    void bufferAppend(int size, char* data);
+    void bufferAppend(int size, const char* data);
     // 直接存入数据进vector buffer（包括必要的空间调整）
 
 
