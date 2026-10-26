@@ -109,6 +109,7 @@ void Buffer::bufferAppend(int size,char* data)
 //     size_t iov_len;   // 缓冲区的长度，单位为字节 (Length in bytes)
 // };
 
+// 注意不一定读得完，如果大于64KB+buffer大小的话也是有剩的
 int Buffer::readFd(int fd, int *saveErrno)
 {
     char AuxBuffer[65536];

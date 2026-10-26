@@ -87,6 +87,7 @@ void TcpConnection::channelDistroy()
 // handleRead 进入时，用户态缓冲区 Buffer 未必为空，之前的包可能没有消费完
 void TcpConnection::handleRead(Timestamp receiveTime)
 {
+    if (state_==Disconnected) return;
     int Errors;
     int result = inputBuffer_.readFd(socket_->Getfd(),&Errors);
     if (result==-1)
@@ -97,7 +98,6 @@ void TcpConnection::handleRead(Timestamp receiveTime)
             handleRead(receiveTime);
             return;
         }
-        errno=Errors;
         handleError();
         return;
     }
@@ -107,7 +107,14 @@ void TcpConnection::handleRead(Timestamp receiveTime)
     }
     else
     {
-        messageCallback_(shared_from_this(),&inputBuffer_,receiveTime);
+        if (messageCallback_!=nullptr)
+        {
+            messageCallback_(shared_from_this(),&inputBuffer_,receiveTime);
+        }
+        else
+        {
+            inputBuffer_.useAllData();
+        }
     }
 }
 // 停止接收事件、通知用户连接断开，并通知 TcpServer 开始注销此连接
@@ -132,11 +139,18 @@ void TcpConnection::handleError()
     if (state_==Disconnected) return;
     int socketError = 0;
     socklen_t length = sizeof(socketError);
-    if (getsockopt(channel_->fd(), SOL_SOCKET, SO_ERROR, &socketError, &length) < 0) 
+    if (getsockopt(channel_->fd(), SOL_SOCKET, SO_ERROR, &socketError, &length)==-1) 
     // 将 optname 参数设置为 SO_ERROR 来专门查询该 Socket 内部操作产生的错误码，会写入传入缓冲区socketError
+    // getsockopt返回0表示查询成功，-1查询失败
     {
         socketError = errno;
-        log_error("Error %d occured on socket fd %d,closing fd",socketError,socket_->Getfd());
+        log_error("Fail to locate errors on socket fd %d with errno %d",socket_->Getfd(),socketError);
+        handleClose();
+    }
+    else
+    {
+        socketError = errno;
+        log_error("socket fd %d failed with errno %d",socket_->Getfd(),socketError);
         handleClose();
     }
 }
