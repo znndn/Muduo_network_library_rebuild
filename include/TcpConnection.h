@@ -32,23 +32,46 @@ public:
     ~TcpConnection();
     // 先销毁tcpconnection，再销毁eventloop
 
-    EventLoop* getLoop() const { return loop_; }
-    const std::string& name() const { return name_; }
-    const InetAddress& localAddress() const { return localAddr_; }
-    const InetAddress& peerAddress() const { return peerAddr_; }
-    bool connected() const { return state_ == Connected; }
+    EventLoop* getLoop() const 
+    {
+        return loop_; 
+    }
+    const std::string& name() const 
+    { 
+        return name_; 
+    }
+    const InetAddress& localAddress() const 
+    { 
+        return localAddr_; 
+    }
+    const InetAddress& peerAddress() const 
+    { 
+        return peerAddr_; 
+    }
+    bool connected() const 
+    { 
+        return state_ == Connected; 
+    }
 
     void send(const std::string& buf);
     void shutdown();
 
     void setConnectionCallback(const ConnectionCallback& cb)
-    { connectionCallback_ = cb; }
+    { 
+        connectionCallback_ = cb; 
+    }
     void setMessageCallback(const MessageCallback& cb)
-    { messageCallback_ = cb; }
+    { 
+        messageCallback_ = cb; 
+    }
     void setWriteCompleteCallback(const WriteCompleteCallback& cb)
-    { writeCompleteCallback_ = cb; }
+    { 
+        writeCompleteCallback_ = cb; 
+    }
     void setCloseCallback(const CloseCallback& cb)
-    { closeCallback_ = cb; }
+    { 
+        closeCallback_ = cb; 
+    }
 
     void setHighWaterMarkCallback(const HighWaterMarkCallback& cb,
         size_t highWaterMark)
@@ -63,7 +86,8 @@ public:
     // 在正确线程解除 Channel 管理关系
 
 private:
-    enum StateE {
+    enum StateE 
+    {
         Disconnected, 
         Connecting,  //  对象正在完成装配，尚未启用连接读关注
         Connected,  // 已建立对象关联并启用读
@@ -78,7 +102,7 @@ private:
     // 执行自身 channel 的回调函数，实际上执行的就是上述函数
     // 会在 tcp connection 的构造函数中绑定。
 
-    void sendInLoop(const void* data, size_t len);
+    void sendInLoop(const char* data, size_t len);
     void shutdownInLoop();
 
     EventLoop* loop_;

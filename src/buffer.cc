@@ -256,4 +256,3 @@ std::string Buffer::retrieveAllAsString()
 
 
 
-

@@ -87,7 +87,7 @@ void TcpConnection::channelDistroy()
 // handleRead 进入时，用户态缓冲区 Buffer 未必为空，之前的包可能没有消费完
 void TcpConnection::handleRead(Timestamp receiveTime)
 {
-    if (state_==Disconnected) return;
+    if (state_==Disconnected || channel_->isReading()==false) return;
     int Errors;
     int result = inputBuffer_.readFd(socket_->Getfd(),&Errors);
     if (result==-1)
@@ -117,12 +117,56 @@ void TcpConnection::handleRead(Timestamp receiveTime)
         }
     }
 }
+void TcpConnection::handleWrite()
+{
+// epollwait 返回时，channel针对写关注的fd调用handlewrite对应的回调函数，outputbuffer也需要消耗缓冲区
+    if (state_==Disconnected || channel_->isWriting()==false) return;
+    int Error;
+    int result = outputBuffer_.writeFd(socket_->Getfd(),&Error);
+    if (result==-1)
+    {
+        if (Error== EAGAIN|EWOULDBLOCK)
+        {
+            channel_->enableWriting();
+            return;
+        }
+        else if (Error==EINTR)
+        {
+            handleWrite();
+            return;
+        }
+        else
+        {
+            handleClose();
+        }
+    }
+    else if (result==0)
+    {
+        channel_->enableWriting();
+        return;
+    }
+    else
+    {
+        if (result<outputBuffer_.readableBytes())
+        {
+            outputBuffer_.useData(result);
+            channel_->enableWriting();
+            return;
+        }
+        else if (result==outputBuffer_.readableBytes())
+        {
+            outputBuffer_.useAllData();
+            channel_->disableWriting();
+            return;
+        }
+    }
+}
 // 停止接收事件、通知用户连接断开，并通知 TcpServer 开始注销此连接
 void TcpConnection::handleClose()
 {
     if (state_==Disconnected) return;
     setState(Disconnected);
-    log_info("close tcp connection on fd=%d state=%d\n", channel_->fd(), static_cast<int>(state_));
+    log_info("close tcp connection on fd=%d state=%d due to failure\n", channel_->fd(), static_cast<int>(state_));
     channel_->disableAll();
     reading_=false;
     TcpConnectionPtr guard(shared_from_this());
@@ -155,6 +199,60 @@ void TcpConnection::handleError()
     }
 }
 
+void TcpConnection::sendInLoop(const char* data, size_t len)
+{
+    if (state_==Disconnected) return;
+    else if (len<=0) return;
+
+    if (outputBuffer_.readableBytes()>0 || channel_->isWriting()==true) 
+    // 只有输出缓冲为空且没有进行中的写关注时，才尝试直接写新数据
+    {
+        outputBuffer_.bufferAppend(len,const_cast<char*>(data));
+    }
+    else
+    {
+        int errors;
+        int result=outputBuffer_.writeFd(socket_->Getfd(),&errors);
+        errors=errno;
+        if (result>0)
+        {
+            if (result<len)
+            {
+                outputBuffer_.bufferAppend(len-result,const_cast<char*>(data)+result);
+                channel_->enableWriting();
+            }
+            else channel_->disableWriting();
+        }
+        else if (result==0) // 写入成功但是写入0个字节
+        {
+            outputBuffer_.bufferAppend(len,const_cast<char*>(data));
+            channel_->enableWriting();
+            sendInLoop(data,len);
+            // 积压数据的处理由 handleWrite() 负责，不需要等下一次 sendInLoop()。
+            // 只要写关注，每次epollwait就会可写时返回，触发handlewrite处理缓冲区
+            return;
+        }
+        else
+        {
+            if (errors==EAGAIN||errors==EWOULDBLOCK)
+            // 内核 TCP Send Buffer已经满了，非阻塞写操作无法写入任何数据
+            {
+                outputBuffer_.bufferAppend(len,const_cast<char*>(data));
+                channel_->enableWriting();
+                return;
+            }
+            else if (errors==EINTR) //中断重来
+            {
+                sendInLoop(data,len);
+                return;
+            }
+            else
+            {
+                handleError();
+            }
+        }
+    }
+}
 
 
 
