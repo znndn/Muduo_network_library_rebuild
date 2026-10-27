@@ -89,7 +89,7 @@ char* Buffer::beginWriteLoc()
     return &buffer[0] + writerIndex;
 }
 
-void Buffer::bufferAppend(int size,char* data)
+void Buffer::bufferAppend(int size,const char* data)
 {
     ensureNewStringSize(size);
     std::copy(data, data+size, beginWriteLoc());
