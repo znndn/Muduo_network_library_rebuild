@@ -52,12 +52,11 @@ void TcpConnection::send(const std::string& buf)
 {
     TcpConnectionPtr preserve(shared_from_this());
     std::string message(buf); // 拷贝构造，因为 buf 是一个左值
-    loop_->runInLoop([preserve,message]()
+    loop_->runInLoop([preserve,message]() // 按值捕获是安全的，引用则要保证原数据不被销毁
         {
             if (preserve->connected()==true)
             {
-                std::string toSend(message);
-                preserve->sendInLoop(toSend.c_str(),toSend.length());
+                preserve->sendInLoop(message.c_str(),message.length());
             }
         }
     );
@@ -65,12 +64,13 @@ void TcpConnection::send(const std::string& buf)
 void TcpConnection::shutdown()
 {
     TcpConnectionPtr preserve(shared_from_this());
-    if (state_==Connected || state_==Connecting)
-        state_=Disconnecting; 
-    else if (state_==Disconnected) return;
+    // runinloop之前不宜修改state，防止正在（即将）执行的任务先遇到disconnecting
+    // 例如shutdown之前有send，那么sendInLoop会因为状态不对而返回
     
     loop_->runInLoop([preserve]()
     {
+        if (preserve->state_==Connected)
+            preserve->setState(Disconnecting);
         preserve->shutdownInLoop();
         // 如果不行自动返回，靠的是写关注触发的handlewrite，清空之后自动调用shutdowninloop
     });
@@ -197,8 +197,6 @@ void TcpConnection::handleWrite()
     {
         if (result < outputBuffer_.readableBytes())
         {
-            if (outputBuffer_.readableBytes()<highWaterMark_ && result+outputBuffer_.readableBytes()>highWaterMark_)
-                highWaterMarkCallback_(shared_from_this(), result+outputBuffer_.readableBytes());
             outputBuffer_.useData(result);
             channel_->enableWriting();
             return;
@@ -207,7 +205,7 @@ void TcpConnection::handleWrite()
         {
             outputBuffer_.useAllData();
             channel_->disableWriting();
-            WriteCompleteCallback(shared_from_this());
+            writeCompleteCallback_(shared_from_this()); // 注意区分类型和调用的包装类（是否有_）
             shutdownInLoop();//如果之前是disconnecting就关闭写
             return;
         }
@@ -267,6 +265,7 @@ void TcpConnection::sendInLoop(const char* data, size_t len)
         int result;
         do
         {
+            // 尝试直接将字符串写入socket fd ，不通过buffer
             result=::write(socket_->Getfd(),data,len);
             errors=errno;
             
@@ -276,6 +275,10 @@ void TcpConnection::sendInLoop(const char* data, size_t len)
         {
             if (result<len)
             {
+                int CurrPileUp = outputBuffer_.readableBytes()+(len-result);
+                if (outputBuffer_.readableBytes()<highWaterMark_ && CurrPileUp >= highWaterMark_)
+                    highWaterMarkCallback_(shared_from_this(), CurrPileUp);
+
                 outputBuffer_.bufferAppend(len-result,const_cast<char*>(data)+result);
                 channel_->enableWriting();
             }

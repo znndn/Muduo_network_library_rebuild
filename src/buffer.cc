@@ -89,7 +89,7 @@ char* Buffer::beginWriteLoc()
     return &buffer[0] + writerIndex;
 }
 
-void Buffer::bufferAppend(int size,char* data)
+void Buffer::bufferAppend(int size,const char* data)
 {
     ensureNewStringSize(size);
     std::copy(data, data+size, beginWriteLoc());
@@ -151,10 +151,11 @@ int Buffer::readFd(int fd, int *saveErrno)
     return result;
 }
 
+// 将buffer内容写到socket fd中
 int Buffer::writeFd(int fd, int *saveErrno)
 {
     int result=::write(fd, MsgStartLoc(), readableBytes());
-    if (result==-1) //err
+    if (result==-1) //errs
     {
         *saveErrno=errno;
     }
