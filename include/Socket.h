@@ -23,7 +23,7 @@ class Socket: noncopyable
     // 绑定对方sockfd和地址端口
 
     void shutDownWrite(); 
-    // 半关闭
+    // 半关闭,禁止写，但是不移除写缓冲区的内容。
 
     void setReuseAddr(bool on);
     void setReusePort(bool on);

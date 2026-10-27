@@ -39,12 +39,55 @@ TcpConnection::TcpConnection(
     channel_->setErrorCallback([this](){handleError();});
     // 在此处设置对应 channel 的回调函数，让 channel 回调的时候可以找到自己的 TCP connection。
 }   
-
 TcpConnection::~TcpConnection()
 {
     socket_.reset();
     channel_.reset();
     setState(Disconnected);
+}
+
+// 尝试先延长tcp connection的寿命，然后创建string副本
+// 再开始在loop中布置同线程立即任务：调用sendInLoop发送数据
+void TcpConnection::send(const std::string& buf)
+{
+    TcpConnectionPtr preserve(shared_from_this());
+    std::string message(buf); // 拷贝构造，因为 buf 是一个左值
+    loop_->runInLoop([preserve,message]()
+        {
+            if (preserve->connected()==true)
+            {
+                std::string toSend(message);
+                preserve->sendInLoop(toSend.c_str(),toSend.length());
+            }
+        }
+    );
+}
+void TcpConnection::shutdown()
+{
+    TcpConnectionPtr preserve(shared_from_this());
+    if (state_==Connected || state_==Connecting)
+        state_=Disconnecting; 
+    else if (state_==Disconnected) return;
+    
+    loop_->runInLoop([preserve]()
+    {
+        preserve->shutdownInLoop();
+        // 如果不行自动返回，靠的是写关注触发的handlewrite，清空之后自动调用shutdowninloop
+    });
+}
+
+// 检查是否已经请求停止发送、旧积压是否清空；条件满足时才调用 Socket 的方法
+void TcpConnection::shutdownInLoop()
+{
+    TcpConnectionPtr preserve(shared_from_this());
+    if (state_!=Disconnecting) return;
+    if (channel_->isWriting()==true) return;
+    if (outputBuffer_.readableBytes()!=0)
+    {
+        return;
+    }
+    handleWrite();
+    socket_->shutDownWrite();
 }
 
 // 构造后会被TcpServer调用,关联寿命，启用读、通知应用。
@@ -59,7 +102,6 @@ void TcpConnection::connectEstablished()
     {
         connectionCallback_(shared_from_this());
     }
-
 }
 // 彻底将 Channel 从 Poller/epoll 树中注销，并作为生命周期最后一次资源清理
 void TcpConnection::channelDistroy()
@@ -153,16 +195,20 @@ void TcpConnection::handleWrite()
     }
     else
     {
-        if (result<outputBuffer_.readableBytes())
+        if (result < outputBuffer_.readableBytes())
         {
+            if (outputBuffer_.readableBytes()<highWaterMark_ && result+outputBuffer_.readableBytes()>highWaterMark_)
+                highWaterMarkCallback_(shared_from_this(), result+outputBuffer_.readableBytes());
             outputBuffer_.useData(result);
             channel_->enableWriting();
             return;
         }
-        else if (result==outputBuffer_.readableBytes())
+        else if (result == outputBuffer_.readableBytes())
         {
             outputBuffer_.useAllData();
             channel_->disableWriting();
+            WriteCompleteCallback(shared_from_this());
+            shutdownInLoop();//如果之前是disconnecting就关闭写
             return;
         }
     }

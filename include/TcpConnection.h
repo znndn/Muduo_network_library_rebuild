@@ -54,6 +54,7 @@ public:
     }
 
     void send(const std::string& buf);
+
     void shutdown();
 
     void setConnectionCallback(const ConnectionCallback& cb)
@@ -83,7 +84,7 @@ public:
 
     void connectEstablished();
     void channelDistroy();
-    // 在正确线程解除 Channel 管理关系
+    // 在上层线程解除 Channel 管理关系
 
 private:
     enum StateE 
@@ -126,8 +127,10 @@ private:
 
     WriteCompleteCallback writeCompleteCallback_;
     // 应用层发送缓冲区（outputBuffer_）中的数据
-    // 全部写入内核发送缓冲区时的通知回调（即“写完成”回调）。
+    // 全部写入内核发送缓冲区时的通知回调
     HighWaterMarkCallback highWaterMarkCallback_;
+    // 在用户态 outputBuffer 未发出的字节数量超出阈值时采用该回调
+    // 在超出之后只提醒一次，直到降低到阈值以下
 
     CloseCallback closeCallback_;
 
