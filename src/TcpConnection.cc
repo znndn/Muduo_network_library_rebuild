@@ -205,7 +205,8 @@ void TcpConnection::handleWrite()
         {
             outputBuffer_.useAllData();
             channel_->disableWriting();
-            writeCompleteCallback_(shared_from_this()); // 注意区分类型和调用的包装类（是否有_）
+            if (writeCompleteCallback_!=nullptr) // 注意区分类型和调用的包装类（是否有_）
+                writeCompleteCallback_(shared_from_this()); 
             shutdownInLoop();//如果之前是disconnecting就关闭写
             return;
         }
@@ -225,7 +226,8 @@ void TcpConnection::handleClose()
     {
         connectionCallback_(shared_from_this());
     }
-    closeCallback_(shared_from_this());
+    if (closeCallback_!=nullptr)
+        closeCallback_(shared_from_this());
 }
 // 处理channel的错误回调，对非零 socketError 记录后进入 handleClose
 void TcpConnection::handleError()
@@ -277,7 +279,8 @@ void TcpConnection::sendInLoop(const char* data, size_t len)
             {
                 int CurrPileUp = outputBuffer_.readableBytes()+(len-result);
                 if (outputBuffer_.readableBytes()<highWaterMark_ && CurrPileUp >= highWaterMark_)
-                    highWaterMarkCallback_(shared_from_this(), CurrPileUp);
+                    if (highWaterMarkCallback_!=nullptr)
+                        highWaterMarkCallback_(shared_from_this(), CurrPileUp);
 
                 outputBuffer_.bufferAppend(len-result,const_cast<char*>(data)+result);
                 channel_->enableWriting();
