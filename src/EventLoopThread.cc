@@ -7,10 +7,9 @@ EventLoopThread::EventLoopThread(const ThreadInitCallback& cb,const std::string&
     : loop_(nullptr), 
       exiting_(false),
       ownerThreadId_(CurrentThread::GetTID()),
-      thread_([this]() 
-      { 
-        threadFunc(); 
-      }, name),
+      thread_([this]() { threadFunc(); }, name), 
+      // 调用thread的构造函数，
+      // 需要使用lambda而非直接传入threadFunc是因为后者隐式携带*this，而非<void()>
       callback_(cb)
 {
 }
@@ -34,9 +33,27 @@ EventLoop* EventLoopThread::startLoop()
     return loop_;
 }
 
+void EventLoopThread::stop()
+{
+    assert(CurrentThread::GetTID() == ownerThreadId_);
+    // 确保在父线程中执行该任务
+    if (exiting_==true || thread_.started()==false)
+    {
+        return;
+    }
+    else exiting_=true;
+
+    std::unique_lock<std::mutex> lock(mutex_);
+    cond_.wait(lock,[this] {return loop_!=nullptr;});
+
+    loop_->queueInLoop([this](){loop_->quit();});
+    thread_.join(); // 主线程等待子线程（loop线程）完成返回后再继续，此时子线程已经
+}
+
 void EventLoopThread::threadFunc()
 {
-    EventLoop loop;
+    EventLoop loop; 
+    // 注意整个loop类都是一个局部变量，因此离开threadfunc自动析构
     if (callback_!=nullptr)
     {
         callback_(&loop);
@@ -49,6 +66,7 @@ void EventLoopThread::threadFunc()
 
     loop.loop();
 
+    // 结束loop循环，该quit了
     {
         std::lock_guard<std::mutex> lock(mutex_);
         loop_ = nullptr;

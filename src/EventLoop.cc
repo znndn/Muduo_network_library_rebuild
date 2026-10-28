@@ -72,8 +72,9 @@ EventLoop::EventLoop():
 
 EventLoop::~EventLoop()
 {
-    wakeupChannel_->disableAll();
-    wakeupChannel_->remove();
+    wakeupChannel_->disableAll(); //解除所有关注
+    wakeupChannel_->remove(); 
+    // 最终变为EPollPoller::removeChannel，会移除Poller建立的channelmap，并逐个通知内核delete关注
     wakeupChannel_.reset();
     // 让uniquptr释放wakeupchannel，并关闭eventfd
     ::close(wakeupFd_);

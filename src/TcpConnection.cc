@@ -217,7 +217,7 @@ void TcpConnection::handleClose()
 {
     if (state_==Disconnected) return;
     setState(Disconnected);
-    log_info("close tcp connection on fd=%d state=%d due to failure\n", channel_->fd(), static_cast<int>(state_));
+    log_info("close tcp connection on fd=%d state=%d\n", channel_->fd(), static_cast<int>(state_));
     channel_->disableAll();
     reading_=false;
     TcpConnectionPtr guard(shared_from_this());

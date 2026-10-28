@@ -23,8 +23,8 @@ public:
 
 protected:
     using ChannelMap = std::unordered_map<int, Channel*>;
-    // map存放fd和channel指针,用于记录 fd 对应哪个 Channel
-    // 不会让内核开始监控fd，需要epoll_ctl
+    // map存放socket fd和channel指针,用于记录socket fd和自身channel的对应关系
+    // map上即为这个线程全部的注册socket fd
     ChannelMap channels_;
 
 private:

@@ -30,13 +30,13 @@ void Thread::start()
     assert(!started_); // 如果标记开始后再调用start，终止程序
     thread_ = std::thread([this]() 
     {
-        // 交给子线程执行
+        // std::thread 创建新线程
         {
             std::lock_guard<std::mutex> lock(mutex_);
             tid_ = CurrentThread::GetTID(); // 加锁防止写的时候读
         }
         cond_.notify_one(); // 用于随机唤醒一个正在等待该条件变量的线程
-        func_(); // 调用func构造eventloop，构造函数中记录自身线程id
+        func_(); // 调用func（实际上是threadFunc()）构造eventloop开始运行，结束后自动析构eventloop
     });
     // 父线程继续执行
     started_ = true;

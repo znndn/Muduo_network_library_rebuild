@@ -52,8 +52,7 @@ private:
     // 子线程
     pid_t tid_; // 赋值后应当与所属loop的tid一致 
     ThreadFunc func_;
-    // 保存新线程创建后实际要执行的业务任务，构造时传入具体逻辑
-    // 此处稍后用于构造EventLoop loop，由loop同一线程调用
+    // 构造时传入具体逻辑，实际上就是threadFunc函数的仿函数
     std::string name_;
 
     std::mutex mutex_;
