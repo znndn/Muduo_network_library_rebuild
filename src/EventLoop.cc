@@ -18,6 +18,7 @@
 #include "Logger.h"
 #include "Poller.h"
 #include "Channel.h"
+#include "CurrentThread.h"
 
 thread_local EventLoop* t_loopInThisThread = nullptr;
 // thread_local（线程局部存储）：
@@ -45,9 +46,8 @@ int createEventfd()
     }
 }
 
-// 如果不按照h文件中声明的顺序初始化，可能会收到warning
 EventLoop::EventLoop():
-    threadId_(syscall(SYS_gettid)),
+    threadId_(CurrentThread::GetTID()), // 构造时得知当前loop线程id
     poller_(Poller::newDefaultPoller(this)),
     wakeupFd_(createEventfd()),
     wakeupChannel_(new Channel(this,wakeupFd_))
@@ -136,7 +136,7 @@ void EventLoop::queueInLoop(Functor cb)
 
 bool EventLoop::isInLoopThread() const
 {
-    if (syscall(SYS_gettid)==threadId_) 
+    if (CurrentThread::GetTID()==threadId_) 
     // 注意区分Linux tid（上述）和C++线程id std::thread::getid
     return true;
     else return false;  
