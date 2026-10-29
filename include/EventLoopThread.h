@@ -31,7 +31,7 @@ public:
     EventLoop* startLoop();
     // 父线程启动子线程（loop所在线程）
     void stop();
-    // 父线程提交停止子线程的请求（作为任务队列中的一员），之后父线程再析构
+    // 父线程提交停止子线程的请求（作为任务队列中的一员）
 
 private:
     void threadFunc();

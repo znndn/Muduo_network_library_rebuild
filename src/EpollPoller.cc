@@ -121,13 +121,14 @@ void EPollPoller::updateChannel(Channel* channel)
 }
 void EPollPoller::removeChannel(Channel* channel)
 {
-    // 从channelmap移除，内核停止监控，调整index
+    // 从channelmap移除(移除裸指针，不会让channel析构或者关闭 socket），内核停止监控，调整index
     channels_.erase(channel->fd());
     if (channel->index()==Added)
     {
         update(EPOLL_CTL_DEL, channel);
     }
     channel->set_index(New);
+    // 完成这些步骤后，socket fd 仍然可能是打开的，只是 poller 不再替它报告事件了。
 }
 
 void EPollPoller::fillActiveChannels(int numEvents, ChannelList* activeChannels) const

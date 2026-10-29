@@ -79,6 +79,7 @@ EventLoop::~EventLoop()
     // 让uniquptr释放wakeupchannel，并关闭eventfd
     ::close(wakeupFd_);
     t_loopInThisThread=nullptr;
+    // 此处不会移除 socket fd，只是让 poller 不再报告事件。socket fd 是在 TCP connection 的析构函数中被移除的。
 }
 
 void EventLoop::loop()

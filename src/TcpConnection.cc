@@ -40,7 +40,8 @@ TcpConnection::TcpConnection(
     // 在此处设置对应 channel 的回调函数，让 channel 回调的时候可以找到自己的 TCP connection。
 }   
 TcpConnection::~TcpConnection()
-{
+{//在 TCP connection 的析构函数中，才释放channel（自动调用析构函数），
+    // 同时也销毁了 socket 对象和关闭了 socket（在 socket 的析构函数中）
     socket_.reset();
     channel_.reset();
     setState(Disconnected);

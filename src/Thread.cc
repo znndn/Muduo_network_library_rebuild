@@ -38,19 +38,20 @@ void Thread::start()
         cond_.notify_one(); // 用于随机唤醒一个正在等待该条件变量的线程
         func_(); // 调用func（实际上是threadFunc()）构造eventloop开始运行，结束后自动析构eventloop
     });
-    // 父线程继续执行
+    // 父线程继续执行，与上述std::thread并行处理，不保证先后顺序。
     started_ = true;
 
     std::unique_lock<std::mutex> lock(mutex_); 
-    // 保证在休眠wait后才释放锁，这之后才允许条件变量notify，和条件变量配合只能用重锁
+    // unique lock 和 lock guard 不同的地方在于前者可以临时释放然后再锁上，lock guard 并不行。
     cond_.wait(lock, [this]() { return tid_ != 0; });
     // cond_.wait 在每次唤醒后检查tid_!=0是否成立，仅仅在 tid_ != 0 成立退出wait
+    // 进入等待之后会释放 mutex，只有在检查的时候会拿回来。
 }
 
 void Thread::join()
 {
     assert(started_);
-    assert(CurrentThread::GetTID() != tid_);// 确认当前运行在loop所在线程上
+    assert(CurrentThread::GetTID() != tid_);// 确认当前运行在 loop 线程的父线程上（TID 与 loop 的 TID 不同）
     if (joined_)
     {
         return;

@@ -35,6 +35,7 @@ private:
     // 第一个参数应该和 channel 的私有变量 event 相等。表示关注的事情。
 
     int epollfd_;
+    // 一个线程只有一个 epoll fd，也只有一个 epoll poller 实例。
     EventList events_;
 };
 
