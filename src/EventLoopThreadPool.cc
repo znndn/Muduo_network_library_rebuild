@@ -19,6 +19,7 @@ EventLoopThreadPool::EventLoopThreadPool
 EventLoopThreadPool::~EventLoopThreadPool()
 {
     assert(baseLoop_->isInLoopThread());
+    
     loops_.clear();   // 移除存储的EventLoop*（在EventLoopThread::threadFunc中栈自动回收）
     threads_.clear(); // 析构EventLoopThreads
 }

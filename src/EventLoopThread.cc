@@ -41,19 +41,19 @@ void EventLoopThread::stop()
     // 确保在父线程中执行该任务
     if (exiting_==true || thread_.started()==false)
     {
+        exiting_==true;
         return;
     }
     else exiting_=true;
 
     {
         std::unique_lock<std::mutex> lock(mutex_);
-        cond_.wait(lock,[this] {return loop_!=nullptr;});
-    // 注意这里的 wait，只有在进入等待之后才会释放锁，
-    // 其余情况包括检查loop的值,和检查完毕符合条件并返回，都会持有锁。
-    // 也就是说，这里如果不用大括号自动析构锁的话，锁是不会在检查正确返回后自动释放的。
+        if (loop_ != nullptr)
+        {
+            EventLoop* loop = loop_;
+            loop->queueInLoop([loop]() { loop->quit(); });
+        }
     }
-
-    loop_->queueInLoop([this](){loop_->quit();});
     thread_.join(); // 主线程等待子线程（loop线程）完成返回后再继续，此时子线程已经
 }
 
