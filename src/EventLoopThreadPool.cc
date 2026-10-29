@@ -40,7 +40,7 @@ void EventLoopThreadPool::start(const ThreadInitCallback& cb)
     for (int i = 0; i < numThreads_; ++i)
     {
         auto thread = std::make_unique<EventLoopThread>(cb, name_ + std::to_string(i));
-        
+
         EventLoop* loop = thread->startLoop();
         threads_.push_back(std::move(thread));
         loops_.push_back(loop);
@@ -59,23 +59,38 @@ EventLoop* EventLoopThreadPool::getNextLoop()
     assert(started_);
 
     if (loops_.size()==0) return baseLoop_;
+    // 只是在没有分配子线程（loops_ 为空）的特殊情况下，为了保证接口可用而临时把 baseLoop_ 拿出来兜底
+    else if (loops_.size()==1) return loops_[0];
     else
     {
-        int toReturn=next_;
-        if (next_!=loops_.size())
+        int toReturn;
+        if (next_==loops_.size()-1)
         {
+            toReturn=next_;
+            next_=0;
+        }
+        else 
+        {
+            toReturn=next_;
             next_++;
         }
-        else next_=0;
         return loops_[toReturn];
     } 
 }
 
 std::vector<EventLoop*> EventLoopThreadPool::getAllLoops()
 {
+    assert(baseLoop_->isInLoopThread());
+    assert(started_);
+
+    if (loops_.empty())
+    {
+        return std::vector<EventLoop*>{baseLoop_}; 
+        
+        // 空的的话返回baseloop的ventor，让接口可用
+    }
     return loops_;
 }
-
 
 
 

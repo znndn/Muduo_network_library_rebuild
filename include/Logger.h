@@ -10,7 +10,8 @@ class Logger: noncopyable
     Logger();
     // 这里最好初始化loglevel
     ~Logger()=default;
-    int logLevel;
+    static thread_local int logLevel;
+    // 让每个线程持有一份loglevel副本，避免互相覆盖
 
     public:
 

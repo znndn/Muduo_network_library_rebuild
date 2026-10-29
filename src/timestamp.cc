@@ -24,19 +24,22 @@ Timestamp Timestamp::now()
 
 std::string Timestamp::toString() const
 {
-    char arr[128]={0};
-    auto curr=localtime(&SecondsSinceEpoch_);
-    snprintf(arr,128,"%4d/%02d/%02d %02d:%02d:%02d", 
-        curr->tm_year+1900,
-        curr->tm_mon+1,
-        curr->tm_mday,
-        curr->tm_hour,
-        curr->tm_min,
-        curr->tm_sec);
-    std::string result(arr);
-    return result;
-}
+    char arr[128] = {0};
+    time_t seconds = static_cast<time_t>(SecondsSinceEpoch_);
+    struct tm curr = {};
+    // 标准库用于表示分解时间的结构体tm
+    if (::localtime_r(&seconds, &curr) == nullptr)
+    // 时间转换函数 localtime_r，如果转换失败
+    {
+        return "";
+    }
 
+    snprintf(arr, sizeof(arr), "%4d/%02d/%02d %02d:%02d:%02d",
+             curr.tm_year + 1900, curr.tm_mon + 1, curr.tm_mday,
+             curr.tm_hour, curr.tm_min, curr.tm_sec);
+
+    return std::string(arr);
+}
 
 
 

@@ -11,6 +11,8 @@ set(LIBS
     pthread
 )
 
+find_package(Threads REQUIRED)
+
 #添加子目录，将中型项目的cmakelist分开文件夹写再去统筹是合理的
 add_subdirectory(src)
 
