@@ -25,9 +25,9 @@ public:
 
     void setThreadNum(int numThreads);
     // 额外创建numThreads个工作线程（子线程）
-    
-    void start();                                                                                                                                                                     
-    void start(const ThreadInitCallback &cb);     
+                                                                                                                                                                        
+    void start(const ThreadInitCallback &cb = ThreadInitCallback()); 
+    // 默认参数赋值（如果cb是nullptr),自动赋值空回调 std::function<void(EventLoop*)>
 
     EventLoop* getNextLoop();
     // 根据next下标获取下一个loop
