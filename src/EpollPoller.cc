@@ -129,6 +129,8 @@ void EPollPoller::removeChannel(Channel* channel)
     }
     channel->set_index(New);
     // 完成这些步骤后，socket fd 仍然可能是打开的，只是 poller 不再替它报告事件了。
+    // socket fd 交给socket类自己处理（tcpconnection保存了他们的uniqueptr）
+    // event fd 交给eventloop析构时处理
 }
 
 void EPollPoller::fillActiveChannels(int numEvents, ChannelList* activeChannels) const

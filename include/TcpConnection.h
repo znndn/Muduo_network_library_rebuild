@@ -84,7 +84,7 @@ public:
 
     void connectEstablished();
     void channelDistroy();
-    // 在上层线程解除 Channel 管理关系
+    // 彻底将 Channel 从 Poller/epoll 树中注销，上层负责安排该注销（在handleclose的回调之后）
 
 private:
     enum StateE 
@@ -118,6 +118,7 @@ private:
     
     const InetAddress localAddr_;
     const InetAddress peerAddr_;
+    // 由tcpserver在建立时初始化
 
     ConnectionCallback connectionCallback_;
     // TCP 连接状态改变时的通知回调（建立成功 或 断开连接）

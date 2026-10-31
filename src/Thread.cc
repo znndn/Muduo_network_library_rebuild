@@ -52,6 +52,7 @@ void Thread::join()
 {
     assert(started_);
     assert(CurrentThread::GetTID() != tid_);// 确认当前运行在 loop 线程的父线程上（TID 与 loop 的 TID 不同）
+    
     if (joined_)
     {
         return;

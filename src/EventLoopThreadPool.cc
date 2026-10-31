@@ -38,18 +38,23 @@ void EventLoopThreadPool::start(const ThreadInitCallback& cb)
 
     started_ = true;
 
-    for (int i = 0; i < numThreads_; ++i)
+    for (int i = 0; i < numThreads_; i++)
     {
+        // 通过构造函数保存cb，等到 EventLoopThread::threadFunc调用并执行cb
         auto thread = std::make_unique<EventLoopThread>(cb, name_ + std::to_string(i));
 
         EventLoop* loop = thread->startLoop();
+        
         threads_.push_back(std::move(thread));
         loops_.push_back(loop);
     }
 
-    if (numThreads_ == 0 && cb)
+    // 如果用户没有设置多线程 (numThreads_ == 0) 且cb非空，说明是单线程的情况        
+    if (numThreads_ == 0 && cb!=nullptr)
+    
     {
         cb(baseLoop_);
+        // 直接运行cb，因为baseloop早已启动
     }
 }
 

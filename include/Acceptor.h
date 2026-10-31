@@ -35,7 +35,7 @@ private:
     void handleRead();
 
     EventLoop* loop_;
-    Socket acceptSocket_;
+    Socket acceptSocket_; //不要时作为成员函数自动析构
     Channel acceptChannel_;
     NewConnectionCallback newConnectionCallback_;
     bool listenning_;

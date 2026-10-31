@@ -64,7 +64,9 @@ void Acceptor::handleRead()
         // 调用读回调是照例的，可能是因为socket fd等有更新，而非新连接让其返回
         // EAGAIN/EWOULDBLOCK 表示这次没有连接可接受
         auto saveError=errno;
-        if (saveError==EAGAIN|saveError==EWOULDBLOCK) return;
+        if (saveError == EAGAIN || saveError == EWOULDBLOCK|| 
+            saveError == EINTR || saveError == ECONNABORTED)
+            return;
         else log_fatal("fail to fetch client InetAddress with errno %d",saveError);
     }
     else

@@ -11,6 +11,8 @@
 #include <sys/types.h>
 #include "noncopyable.h"
 
+// Thread 对象的内存分配与方法调用（如 start()、析构函数）都在父线程中执行
+
 class Thread : noncopyable
 {
 public:
@@ -32,7 +34,8 @@ private:
 
     bool started_;
     bool joined_;
-    std::thread thread_;
+    std::thread thread_;  
+    // 子线程 / 工作线程（不是调用者自己）  
     pid_t tid_;
     ThreadFunc func_;
     std::string name_;

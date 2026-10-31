@@ -41,7 +41,7 @@ void EventLoopThread::stop()
     // 确保在父线程中执行该任务
     if (exiting_==true || thread_.started()==false)
     {
-        exiting_==true;
+        exiting_=true;
         return;
     }
     else exiting_=true;
@@ -63,6 +63,7 @@ void EventLoopThread::threadFunc()
     // 注意整个loop类都是一个局部变量，因此离开threadfunc自动析构
     if (callback_!=nullptr)
     {
+        //  在每个线程启动之前会单独运行一次cb 
         callback_(&loop);
     }
 

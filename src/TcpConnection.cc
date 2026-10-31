@@ -67,13 +67,13 @@ void TcpConnection::shutdown()
     TcpConnectionPtr preserve(shared_from_this());
     // runinloop之前不宜修改state，防止正在（即将）执行的任务先遇到disconnecting
     // 例如shutdown之前有send，那么sendInLoop会因为状态不对而返回
-    
-    loop_->runInLoop([preserve]()
-    {
-        if (preserve->state_==Connected)
-            preserve->setState(Disconnecting);
+
+    loop_->runInLoop([preserve]() {
+        if (preserve->state_ != Connected)
+            return;
+        preserve->setState(Disconnecting);
         preserve->shutdownInLoop();
-        // 如果不行自动返回，靠的是写关注触发的handlewrite，清空之后自动调用shutdowninloop
+         // 如果不行自动返回，靠的是写关注触发的handlewrite，清空之后自动调用shutdowninloop
     });
 }
 
@@ -141,10 +141,12 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 
     } while (result<0 && Errors==EINTR);
 
-    if (result==-1)
+    if (result == -1)
     {
-        if (Errors==EAGAIN || Errors==EWOULDBLOCK) return;
-        handleError();
+        if (Errors == EAGAIN || Errors == EWOULDBLOCK)
+            return;
+        log_error("read failed, fd=%d errno=%d", socket_->Getfd(), Errors);
+        handleClose();
         return;
     }
     else if (result==0) // 识别 EOF 后逻辑关闭
@@ -307,7 +309,8 @@ void TcpConnection::sendInLoop(const char* data, size_t len)
             }
             else
             {
-                handleError();
+                log_error("write failed, fd=%d errno=%d", socket_->Getfd(), errors);
+                handleClose();
             }
         }
     }
