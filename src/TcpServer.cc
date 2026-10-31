@@ -229,7 +229,7 @@ void TcpServer::maybeFinishStop()
 {
     assert(loop_->isInLoopThread());// 确认在主线程baseloop 
 
-    if (!stopping_ || stopped_ || acceptor_==nullptr || !connections_.empty()|| pendingCleanups_ != 0)
+    if (!stopping_ || stopped_ || acceptor_!=nullptr || !connections_.empty()|| pendingCleanups_ != 0)
         return;
 
     threadPool_.reset();

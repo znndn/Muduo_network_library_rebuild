@@ -26,3 +26,7 @@ add_subdirectory(src)
 
 # make -j
 
+
+# Interactive echo application; not part of the shared library.
+add_executable(testserver example/testserver.cc)
+target_link_libraries(testserver PRIVATE ${CMAKE_PROJECT_NAME})
